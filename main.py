@@ -1,10 +1,12 @@
-import sys
-sys.path.append('tables')
+import sys  # nopep8
+sys.path.append('tables')  # nopep8
 
 from project_config import *
 from dbconnection import *
 from people_table import *
 from phones_table import *
+from constants import *
+
 
 class Main:
 
@@ -16,10 +18,8 @@ class Main:
         return
 
     def db_init(self):
-        pt = PeopleTable()
-        pht = PhonesTable()
-        pt.create()
-        pht.create()
+        PeopleTable().create()
+        PhonesTable().create()
         return
 
     def db_insert_somethings(self):
@@ -40,11 +40,7 @@ class Main:
         return
 
     def show_main_menu(self):
-        menu = """Добро пожаловать! 
-Основное меню (выберите цифру в соответствии с необходимым действием): 
-    1 - просмотр людей;
-    2 - сброс и инициализация таблиц;
-    9 - выход."""
+        menu = main_menu
         print(menu)
         return
 
@@ -63,7 +59,7 @@ class Main:
             return "0"
         else:
             return next_step
-            
+
     def show_people(self):
         self.person_id = -1
         menu = """Просмотр списка людей!
@@ -71,24 +67,20 @@ class Main:
         print(menu)
         lst = PeopleTable().all()
         for i in lst:
-            print(str(i[0]) + "\t" + str(i[1]) + "\t" + str(i[2]) + "\t" + str(i[3]))
-        menu = """Дальнейшие операции: 
-    0 - возврат в главное меню;
-    3 - добавление нового человека;
-    4 - удаление человека;
-    5 - просмотр телефонов человека;
-    9 - выход."""
+            print(str(i[0]) + "\t" + str(i[1]) +
+                  "\t" + str(i[2]) + "\t" + str(i[3]))
+        menu = people_menu
         print(menu)
         return
 
     def after_show_people(self, next_step):
         while True:
             if next_step == "4":
-                print("Пока не реализовано!")
-                return "1"
-            elif next_step == "6" or next_step == "7":
-                print("Пока не реализовано!")
-                next_step = "5"
+                next_step = self.delete_man_by_id()
+            elif next_step == "6":
+                next_step = self.show_add_phone()
+            elif next_step == "7":
+                next_step = self.delete_phone()
             elif next_step == "5":
                 next_step = self.show_phones_by_people()
             elif next_step != "0" and next_step != "9" and next_step != "3":
@@ -97,56 +89,91 @@ class Main:
             else:
                 return next_step
 
+    def check_input(self, label, max_len, not_null, break_code=None):
+        candidate = (input(f"Введите {str(label)} (1 - отмена): ").strip())
+        if candidate == "1":
+            return break_code
+        while not_null and len(candidate.strip()) == 0 or len(candidate.strip()) > max_len:
+            candidate = input(
+                "Некорректный ввод (1 - отмена):").strip()
+            if candidate == "1":
+                return break_code
+        return candidate
+
     def show_add_person(self):
-        # Не реализована проверка на максимальную длину строк. Нужно доделать самостоятельно!
         data = []
-        data.append(input("Введите фамилию (1 - отмена): ").strip())
-        if data[0] == "1":
+        surname = self.check_input('фамилию', 32, True)
+        if (not surname):
             return
-        while len(data[0].strip()) == 0:
-            data[0] = input("Фамилия не может быть пустой! Введите фамилию заново (1 - отмена):").strip()
-            if data[0] == "1":
-                return
-        data.append(input("Введите имя (1 - отмена): ").strip())
-        if data[1] == "1":
+        data.append(surname)
+        name = self.check_input('имя', 32, True)
+        data.append(name)
+        if (not name):
             return
-        while len(data[1].strip()) == 0:
-            data[1] = input("Имя не может быть пустым! Введите имя заново (1 - отмена):").strip()
-            if data[1] == "1":
-                return
-        data.append(input("Введите отчество (1 - отмена):").strip())
-        if data[2] == "1":
-            return
+        data.append(self.check_input('отчество', 32, False))
+
         PeopleTable().insert_one(data)
         return
+
+    def delete_by_field(self, table, menu, field):
+        while True:
+            num = str(input(prompts["empty_line"]))
+            while len(num.strip()) == 0:
+                num = str(input(prompts["empty_line_error"]))
+            if num == "0":
+                return "1"
+            obj = table().check_field_exist(field, num)
+            if not obj:
+                print(prompts["no_rows_error"])
+            else:
+                break
+        success = table().delete_one_by_field(field, num)
+        print("Запись была уничтожена!" if success else "Неверный ввод")
+        print(menu)
+        return self.read_next_step()
+
+    def delete_man_by_id(self):
+        return self.delete_by_field(PeopleTable, people_menu, 'id')
+
+    def delete_phone(self):
+        return self.delete_by_field(PhonesTable, phones_menu, 'phone')
+
+    def show_add_phone(self):
+        break_code = '6'
+        phone = self.check_input('номер телефона', 12, True, break_code)
+        if (phone == break_code):
+            return break_code
+        exist = PhonesTable().check_field_exist(
+            ['person_id', 'phone'], [self.person_id, phone])
+        print(phones_menu)
+        if (exist):
+            print("Нарушен Primary Key, запись не была вставлена")
+            return self.read_next_step()
+        PhonesTable().insert_one([self.person_id, phone])
+        return self.read_next_step()
 
     def show_phones_by_people(self):
         if self.person_id == -1:
             while True:
-                num = input("Укажите номер строки, в которой записана интересующая Вас персона (0 - отмена):")
+                num = input(prompts["empty_line"])
                 while len(num.strip()) == 0:
-                    num = input("Пустая строка. Повторите ввод! Укажите номер строки, в которой записана интересующая Вас персона (0 - отмена):")
+                    num = input(prompts["empty_line_error"])
                 if num == "0":
                     return "1"
-                person = PeopleTable().find_by_position(int(num))
+                person = PeopleTable().find_by_id(int(num))
                 if not person:
-                    print("Введено число, неудовлетворяющее количеству людей!")
+                    print("Нет такого человека!")
                 else:
                     self.person_id = int(person[0])
                     self.person_obj = person
                     break
-        print("Выбран человек: " + self.person_obj[1] + " " + self.person_obj[2] + " " + self.person_obj[3])
+        print("Выбран человек: " +
+              self.person_obj[1] + " " + self.person_obj[2] + " " + self.person_obj[3])
         print("Телефоны:")
         lst = PhonesTable().all_by_person_id(self.person_id)
         for i in lst:
             print(i[1])
-        menu = """Дальнейшие операции:
-    0 - возврат в главное меню;
-    1 - возврат в просмотр людей;
-    6 - добавление нового телефона;
-    7 - удаление телефона;
-    9 - выход."""
-        print(menu)
+        print(phones_menu)
         return self.read_next_step()
 
         return self.read_next_step()
@@ -168,9 +195,9 @@ class Main:
             elif current_menu == "3":
                 self.show_add_person()
                 current_menu = "1"
-        print("До свидания!")    
+        print("До свидания!")
         return
+
 
 m = Main()
 m.main_cycle()
-    

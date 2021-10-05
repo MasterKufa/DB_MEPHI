@@ -1,5 +1,6 @@
 from dbconnection import *
 
+
 class DbTable:
     dbconn = None
 
@@ -19,7 +20,9 @@ class DbTable:
         return ['id']
 
     def column_names_without_id(self):
-        return self.columns().keys() - ['id']
+        lst = list((self.columns().keys() - ['id']))
+        lst.sort()
+        return lst
 
     def table_constraints(self):
         return []
@@ -61,7 +64,7 @@ class DbTable:
         sql += ", ".join(self.primary_key())
         cur = self.dbconn.conn.cursor()
         cur.execute(sql)
-        return cur.fetchone()        
+        return cur.fetchone()
 
     def last(self):
         sql = "SELECT * FROM " + self.table_name()
@@ -77,5 +80,22 @@ class DbTable:
         sql += ", ".join(self.primary_key())
         cur = self.dbconn.conn.cursor()
         cur.execute(sql)
-        return cur.fetchall()        
-        
+        return cur.fetchall()
+
+    def check_field_exist(self, field, field_val):
+        cur = self.dbconn.conn.cursor()
+        if (isinstance(field, list) and isinstance(field_val, list)):
+            cur.execute(
+                f"""SELECT * FROM {self.table_name()} WHERE {' AND '.join([f"{x}='{field_val[inx]}'" for  (inx, x) in enumerate(field)])}""")
+        else:
+            cur.execute(
+                f"SELECT * FROM {self.table_name()} WHERE {field}='{field_val}'")
+        rows = cur.fetchall()
+        return rows and len(rows) > 0
+
+    def delete_one_by_field(self, field, field_val):
+        is_exist = self.check_field_exist(field, str(field_val))
+        if (is_exist):
+            self.dbconn.conn.cursor().execute(
+                f"DELETE FROM {self.table_name()} WHERE {field} = '{str(field_val)}'")
+        return is_exist
