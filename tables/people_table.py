@@ -12,7 +12,7 @@ class PeopleTable(DbTable):
                 "second_name": ["varchar(32)"]}
 
     def find_by_id(self, num):
-        sql = f"SELECT * FROM {self.table_name() } WHERE id = {num}"
+        sql = f"SELECT * FROM {self.table_name() } WHERE id = %s"
         cur = self.dbconn.conn.cursor()
-        cur.execute(sql)
+        cur.execute(sql, (str(num)))
         return cur.fetchone()

@@ -1,4 +1,5 @@
 from dbconnection import *
+from psycopg2 import sql
 
 
 class DbTable:
@@ -45,16 +46,9 @@ class DbTable:
         return
 
     def insert_one(self, vals):
-        for i in range(0, len(vals)):
-            if type(vals[i]) == str:
-                vals[i] = "'" + vals[i] + "'"
-            else:
-                vals[i] = str(vals[i])
-        sql = "INSERT INTO " + self.table_name() + "("
-        sql += ", ".join(self.column_names_without_id()) + ") VALUES("
-        sql += ", ".join(vals) + ")"
+        sql = f"""INSERT INTO {self.table_name()} ({", ".join(self.column_names_without_id())}) VALUES({", ".join(["%s" for _ in range(len(vals))]) } )"""
         cur = self.dbconn.conn.cursor()
-        cur.execute(sql)
+        cur.execute(sql, (*vals, ))
         self.dbconn.conn.commit()
         return
 
@@ -84,12 +78,16 @@ class DbTable:
 
     def check_field_exist(self, field, field_val):
         cur = self.dbconn.conn.cursor()
-        if (isinstance(field, list) and isinstance(field_val, list)):
-            cur.execute(
-                f"""SELECT * FROM {self.table_name()} WHERE {' AND '.join([f"{x}='{field_val[inx]}'" for  (inx, x) in enumerate(field)])}""")
-        else:
-            cur.execute(
-                f"SELECT * FROM {self.table_name()} WHERE {field}='{field_val}'")
+        isList = isinstance(field, list) and isinstance(field_val, list)
+        fields = field if isList else [field]
+        vals = field_val if isList else [field_val]
+
+        cur.execute(
+            sql.SQL(
+                f"""SELECT * FROM {self.table_name()}
+                    WHERE {" AND ".join(['{} = %s' for _ in range(len(fields))])}"""
+            ).format(*[sql.Identifier(x) for x in fields]), (*vals, ))
+
         rows = cur.fetchall()
         return rows and len(rows) > 0
 
@@ -97,5 +95,9 @@ class DbTable:
         is_exist = self.check_field_exist(field, str(field_val))
         if (is_exist):
             self.dbconn.conn.cursor().execute(
-                f"DELETE FROM {self.table_name()} WHERE {field} = '{str(field_val)}'")
+                sql.SQL(
+                    f"""DELETE FROM {self.table_name()}
+                        WHERE {{}} = %s"""
+                ).format(sql.Identifier(field)), (field_val,))
+
         return is_exist
