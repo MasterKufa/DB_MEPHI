@@ -6,7 +6,7 @@ class PhonesTable(DbTable):
         return self.dbconn.prefix + "phones"
 
     def columns(self):
-        return {"person_id": ["integer", f"REFERENCES {self.dbconn.prefix}people(id)"],
+        return {"person_id": ["integer", f"REFERENCES {self.dbconn.prefix}people(id) ON DELETE CASCADE"],
                 "phone": ["varchar(12)", "NOT NULL"]}
 
     def primary_key(self):
