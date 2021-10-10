@@ -18,5 +18,5 @@ class PhonesTable(DbTable):
     def all_by_person_id(self, pid):
         sql = f"SELECT * FROM {self.table_name()} WHERE person_id = %s ORDER BY {', '.join(self.primary_key())}"
         cur = self.dbconn.conn.cursor()
-        cur.execute(sql, (str(pid)))
+        cur.execute(sql, [pid])
         return cur.fetchall()

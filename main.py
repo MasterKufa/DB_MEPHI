@@ -1,9 +1,12 @@
-import sys  # nopep8
+import sys
+import re
+import math
 sys.path.append('tables')  # nopep8
 
 from project_config import *
 from dbconnection import *
 from people_table import *
+from auto_table import *
 from phones_table import *
 from constants import *
 
@@ -20,29 +23,28 @@ class Main:
     def db_init(self):
         PeopleTable().create()
         PhonesTable().create()
+        AutoTable().create()
         return
 
     def db_insert_somethings(self):
         pt = PeopleTable()
         pht = PhonesTable()
+        autos = AutoTable()
         pt.insert_one(["Test", "Test", "Test"])
         pt.insert_one(["Test2", "Test2", "Test2"])
         pt.insert_one(["Test3", "Test3", "Test3"])
         pht.insert_one([1, "123"])
         pht.insert_one([2, "123"])
         pht.insert_one([3, "123"])
+        autos.insert_one(['a', 'a', 'a', 'a'])
 
     def db_drop(self):
-        pht = PhonesTable()
-        pt = PeopleTable()
-        pht.drop()
-        pt.drop()
-        return
+        PhonesTable().drop()
+        PeopleTable().drop()
+        AutoTable().drop()
 
     def show_main_menu(self):
-        menu = main_menu
-        print(menu)
-        return
+        print(main_menu)
 
     def read_next_step(self):
         return input("=> ").strip()
@@ -60,29 +62,44 @@ class Main:
         else:
             return next_step
 
-    def show_people(self):
+    def show_people(self, page):
         self.person_id = -1
-        menu = """Просмотр списка людей!
-№\tФамилия\tИмя\tОтчество"""
-        print(menu)
-        lst = PeopleTable().all()
-        for i in lst:
+        print(prompts["show_people"])
+        for i in PeopleTable().paginate(page, records_per_page):
             print(str(i[0]) + "\t" + str(i[1]) +
                   "\t" + str(i[2]) + "\t" + str(i[3]))
-        menu = people_menu
-        print(menu)
-        return
+        print(people_menu + f"\n Страница номер {page}")
 
     def after_show_people(self, next_step):
         while True:
             if next_step == "4":
                 next_step = self.delete_man_by_id()
+                self.cur_people_page = 1
             elif next_step == "6":
                 next_step = self.show_add_phone()
             elif next_step == "7":
                 next_step = self.delete_phone()
             elif next_step == "5":
                 next_step = self.show_phones_by_people()
+            elif next_step == "f":
+                if (self.cur_people_page == math.ceil(len(PeopleTable().all()) / records_per_page)):
+                    print(prompts['no_rows_error'])
+                else:
+                    self.cur_people_page += 1
+                return "1"
+            elif next_step == "b":
+                if (self.cur_people_page == 1):
+                    print(prompts['no_rows_error'])
+                else:
+                    self.cur_people_page -= 1
+                return "1"
+            elif re.match(r"^p-\d+$", next_step):
+                page = next_step[2:]
+                if (int(page) < 1 or int(page) > math.ceil(len(PeopleTable().all()) / records_per_page)):
+                    print(prompts['no_rows_error'])
+                else:
+                    self.cur_people_page = page
+                return "1"
             elif next_step != "0" and next_step != "9" and next_step != "3":
                 print("Выбрано неверное число! Повторите ввод!")
                 return "1"
@@ -147,7 +164,7 @@ class Main:
             ['person_id', 'phone'], [self.person_id, phone])
         print(phones_menu)
         if (exist):
-            print("Нарушен Primary Key, запись не была вставлена")
+            print(prompts["primary_forbidden"])
             return self.read_next_step()
         PhonesTable().insert_one([self.person_id, phone])
         return self.read_next_step()
@@ -176,18 +193,18 @@ class Main:
         print(phones_menu)
         return self.read_next_step()
 
-        return self.read_next_step()
-
     def main_cycle(self):
         current_menu = "0"
         next_step = None
+        self.cur_people_page = 1
         while(current_menu != "9"):
             if current_menu == "0":
+                self.cur_people_page = 1
                 self.show_main_menu()
                 next_step = self.read_next_step()
                 current_menu = self.after_main_menu(next_step)
             elif current_menu == "1":
-                self.show_people()
+                self.show_people(self.cur_people_page)
                 next_step = self.read_next_step()
                 current_menu = self.after_show_people(next_step)
             elif current_menu == "2":

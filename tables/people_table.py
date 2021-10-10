@@ -14,5 +14,6 @@ class PeopleTable(DbTable):
     def find_by_id(self, num):
         sql = f"SELECT * FROM {self.table_name() } WHERE id = %s"
         cur = self.dbconn.conn.cursor()
-        cur.execute(sql, (str(num)))
+        print(sql, num, (str(num)))
+        cur.execute(sql, [num])
         return cur.fetchone()
