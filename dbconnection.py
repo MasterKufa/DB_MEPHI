@@ -4,7 +4,7 @@ import psycopg2
 class DbConnection:
 
     def __init__(self, config):
-        self.path = config.dbfilepath
+        # self.path = config.dbfilepath
         self.prefix = config.dbtableprefix
         self.conn = psycopg2.connect(dbname='mephi')
 
@@ -21,4 +21,4 @@ class DbConnection:
         result = cur.fetchall()
         cur.execute("DROP TABLE test")
         self.conn.commit()
-        return (result[0][0] == 1)
+        return result[0][0] == 1

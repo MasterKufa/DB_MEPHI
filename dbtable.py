@@ -21,8 +21,9 @@ class DbTable:
         return ['id']
 
     def column_names_without_id(self):
-        lst = list((self.columns().keys() - ['id']))
-        lst.sort()
+        lst = list(self.columns().keys())
+        if 'id' in lst:
+            lst.remove('id')
         return lst
 
     def table_constraints(self):
@@ -51,7 +52,7 @@ class DbTable:
         self.run_cur_with_commit(sql)
 
     def insert_one(self, vals):
-        sql = f"""INSERT INTO {self.table_name()} ({", ".join(self.column_names_without_id())}) VALUES({", ".join(["%s" for _ in range(len(vals))]) } )"""
+        sql = f"""INSERT INTO {self.table_name()} ({", ".join(self.column_names_without_id())}) VALUES({", ".join(["%s" for _ in range(len(vals))]) } ) """
         cur = self.dbconn.conn.cursor()
         cur.execute(sql, (*vals, ))
         self.dbconn.conn.commit()
@@ -66,10 +67,6 @@ class DbTable:
 
     def all(self):
         sql = f"SELECT * FROM  {self.table_name()} ORDER BY {', '.join(self.primary_key())}"
-        return self.fetch_cursor(sql, False)
-
-    def paginate(self, page, per_page):
-        sql = f"SELECT * FROM  {self.table_name()} ORDER BY {', '.join(self.primary_key())} OFFSET {(int(page) - 1) * per_page} ROWS LIMIT {per_page}"
         return self.fetch_cursor(sql, False)
 
     def check_field_exist(self, field, field_val):
