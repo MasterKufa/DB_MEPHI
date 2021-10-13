@@ -11,7 +11,7 @@ class DbConnection:
     def __del__(self):
         if self.conn:
             self.conn.close()
-
+#привет как дела
     def test(self):
         cur = self.conn.cursor()
         cur.execute("CREATE TABLE test(test integer)")
