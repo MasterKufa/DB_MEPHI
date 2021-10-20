@@ -36,12 +36,12 @@ class Main:
         pht.insert_one([1, "123"])
         pht.insert_one([2, "123"])
         pht.insert_one([3, "123"])
-        autos.insert_one(['a', 'a', 'a', 'a'])
+        autos.insert_one(['a', 'a', 'a', 'a', '1'])
 
     def db_drop(self):
+        AutoTable().drop()
         PhonesTable().drop()
         PeopleTable().drop()
-        AutoTable().drop()
 
     def show_main_menu(self):
         print(main_menu)
@@ -77,10 +77,16 @@ class Main:
                 self.cur_people_page = 1
             elif next_step == "6":
                 next_step = self.show_add_phone()
+            elif next_step == "a6":
+                next_step = self.show_add_auto()
             elif next_step == "7":
                 next_step = self.delete_phone()
+            elif next_step == "a7":
+                next_step = self.delete_auto()
             elif next_step == "5":
                 next_step = self.show_phones_by_people()
+            elif next_step == "auto":
+                next_step = self.show_autos_by_people()
             elif next_step == "f":
                 if (self.cur_people_page == math.ceil(len(PeopleTable().all()) / records_per_page)):
                     print(prompts['no_rows_error'])
@@ -155,6 +161,9 @@ class Main:
     def delete_phone(self):
         return self.delete_by_field(PhonesTable, phones_menu, 'phone')
 
+    def delete_auto(self):
+        return self.delete_by_field(AutoTable, autos_menu, 'identity')
+
     def show_add_phone(self):
         break_code = '6'
         phone = self.check_input('номер телефона', 12, True, break_code)
@@ -169,7 +178,33 @@ class Main:
         PhonesTable().insert_one([self.person_id, phone])
         return self.read_next_step()
 
-    def show_phones_by_people(self):
+    def show_add_auto(self):
+        break_code = 'a6'
+        autoIden = self.check_input('номер авто', 12, True, break_code)
+        if (autoIden == break_code):
+            return break_code
+        exist = AutoTable().check_field_exist(
+            ['person_id', 'identity'], [self.person_id, autoIden])
+        print(phones_menu)
+        if (exist):
+            print(prompts["primary_forbidden"])
+            return self.read_next_step()
+        autoBrand = self.check_input('марка авто', 12, True, break_code)
+        if (autoBrand == break_code):
+            return break_code
+        autoModel = self.check_input('модель авто', 12, True, break_code)
+        if (autoModel == break_code):
+            return break_code
+        autoColor = self.check_input('цвет авто', 12, True, break_code)
+        if (autoColor == break_code):
+            return break_code
+        AutoTable().insert_one(
+            [autoBrand, autoModel, autoColor, autoIden, self.person_id])
+        print('Добавлено')
+        print(autos_menu)
+        return self.read_next_step()
+
+    def show_people_attribute(self, label, table, menu):
         if self.person_id == -1:
             while True:
                 num = input(prompts["empty_line"])
@@ -186,12 +221,18 @@ class Main:
                     break
         print("Выбран человек: " +
               self.person_obj[1] + " " + self.person_obj[2] + " " + self.person_obj[3])
-        print("Телефоны:")
-        lst = PhonesTable().all_by_person_id(self.person_id)
+        print(label)
+        lst = table().all_by_person_id(self.person_id)
         for i in lst:
-            print(i[1])
-        print(phones_menu)
+            print(i)
+        print(menu)
         return self.read_next_step()
+
+    def show_phones_by_people(self):
+        return self.show_people_attribute('Телефоны:', PhonesTable, phones_menu)
+
+    def show_autos_by_people(self):
+        return self.show_people_attribute('Авто:', AutoTable, autos_menu)
 
     def main_cycle(self):
         current_menu = "0"
