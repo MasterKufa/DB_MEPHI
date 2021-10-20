@@ -1,21 +1,19 @@
 from dbtable import *
 
+
 class PeopleTable(DbTable):
     def table_name(self):
         return self.dbconn.prefix + "people"
 
     def columns(self):
-        return {"id": ["integer", "PRIMARY KEY", "AUTOINCREMENT"],
+        return {"id": ["SERIAL", "PRIMARY KEY"],
                 "last_name": ["varchar(32)", "NOT NULL"],
                 "first_name": ["varchar(32)", "NOT NULL"],
                 "second_name": ["varchar(32)"]}
 
-    def find_by_position(self, num):
-        sql = "SELECT * FROM " + self.table_name()
-        sql += " ORDER BY "
-        sql += ", ".join(self.primary_key())
-        sql += " LIMIT 1 OFFSET :offset"
+    def find_by_id(self, num):
+        sql = f"SELECT * FROM {self.table_name() } WHERE id = %s"
         cur = self.dbconn.conn.cursor()
-        cur.execute(sql, {"offset": num - 1})
-        return cur.fetchone()       
-    
+        print(sql, num, (str(num)))
+        cur.execute(sql, [num])
+        return cur.fetchone()

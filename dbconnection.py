@@ -1,11 +1,12 @@
-import sqlite3
+import psycopg2
+
 
 class DbConnection:
 
     def __init__(self, config):
         self.path = config.dbfilepath
         self.prefix = config.dbtableprefix
-        self.conn = sqlite3.connect(self.path)
+        self.conn = psycopg2.connect(dbname='mephi')
 
     def __del__(self):
         if self.conn:
@@ -21,5 +22,3 @@ class DbConnection:
         cur.execute("DROP TABLE test")
         self.conn.commit()
         return (result[0][0] == 1)
-        
-
